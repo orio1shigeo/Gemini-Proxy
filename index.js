@@ -1,31 +1,46 @@
 const express = require('express');
-const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Enable CORS
-app.use(cors());
-app.use(express.json());
+const API_SERVICE_URL = "https://generativelanguage.googleapis.com";
 
-// Target URL without trailing slash
-const TARGET_URL = 'https://generativelanguage.googleapis.com';
-
-// Setup proxy middleware
-app.use('/', createProxyMiddleware({
-  target: TARGET_URL,
-  changeOrigin: true,
-  onError: (err, req, res) => {
-    console.error('代理请求错误:', err);
-    res.status(500).json({
-      error: 'Proxy server error',
-      message: err.message
-    });
+// Proxy middleware options
+const options = {
+  target: API_SERVICE_URL, // target host
+  changeOrigin: true, // needed for virtual hosted sites
+  pathRewrite: (path, req) => {
+    // Remove the base path if your proxy is not at the root
+    // For example, if your proxy is at /api, and you want to proxy /api/users to /users
+    // return path.replace('/api', '');
+    return path;
+  },
+  onProxyReq: (proxyReq, req, res) => {
+    // You can add custom headers here if needed
+    // proxyReq.setHeader('X-Special-Proxy-Header', 'foobar');
+    if (req.body) {
+      let bodyData = JSON.stringify(req.body);
+      // incase if content-type is application/x-www-form-urlencoded -> we need to change to application/json
+      proxyReq.setHeader('Content-Type','application/json');
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+      // stream the content
+      proxyReq.write(bodyData);
+    }
   }
-}));
+};
 
-// Start server
+// Create the proxy
+const apiProxy = createProxyMiddleware(options);
+
+// Use JSON parser for incoming requests
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
+// Mount the proxy middleware
+app.use('/', apiProxy);
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Gemini Proxy running on port ${PORT}`);
-}); 
+  console.log(`Proxy server listening on port ${PORT}`);
+});

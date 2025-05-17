@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: gemini-proxy
+    name: google-api-proxy
     env: node
+    plan: free # Or your desired plan
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: PORT
-        value: 10000 
+      - key: NODE_VERSION
+        value: 18 # Or your desired Node.js version
