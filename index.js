@@ -17,17 +17,13 @@ app.use('/', createProxyMiddleware({
   target: TARGET_URL,
   changeOrigin: true,
   onError: (err, req, res) => {
+    console.error('代理请求错误:', err);
     res.status(500).json({
       error: 'Proxy server error',
       message: err.message
     });
   }
 }));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Gemini Proxy is running' });
-});
 
 // Start server
 app.listen(PORT, () => {
